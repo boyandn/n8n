@@ -3,7 +3,7 @@ import { useSettingsStore } from '@/stores/settings.store';
 import merge from 'lodash/merge';
 import { usePageRedirectionHelper } from './usePageRedirectionHelper';
 import { defaultSettings } from '@/__tests__/defaults';
-import { useUsersStore } from '@/stores/users.store';
+import { useUsersStore } from '@/features/settings/users/users.store';
 import { createPinia, setActivePinia } from 'pinia';
 import * as cloudPlanApi from '@n8n/rest-api-client/api/cloudPlans';
 import { useVersionsStore } from '@/stores/versions.store';
@@ -56,6 +56,8 @@ describe('usePageRedirectionHelper', () => {
 			endpoint: '',
 			infoUrl:
 				'https://docs.n8n.io/release-notes/#n8n1652?utm_source=n8n_app&utm_medium=instance_upgrade_releases',
+			whatsNewEnabled: true,
+			whatsNewEndpoint: '',
 		});
 	});
 

@@ -1,8 +1,9 @@
-import { useActiveElement, useEventListener } from '@vueuse/core';
+import { PopOutWindowKey } from '@/constants';
+import { shouldIgnoreCanvasShortcut } from '@/features/workflows/canvas/canvas.utils';
 import { useDeviceSupport } from '@n8n/composables/useDeviceSupport';
-import type { MaybeRef, Ref } from 'vue';
-import { computed, inject, unref } from 'vue';
-import { PiPWindowSymbol } from '@/constants';
+import { useActiveElement, useEventListener } from '@vueuse/core';
+import type { MaybeRefOrGetter } from 'vue';
+import { computed, inject, ref, toValue } from 'vue';
 
 type KeyboardEventHandler =
 	| ((event: KeyboardEvent) => void)
@@ -25,31 +26,24 @@ export type KeyMap = Partial<Record<string, KeyboardEventHandler>>;
  * ```
  */
 export const useKeybindings = (
-	keymap: Ref<KeyMap>,
+	keymap: MaybeRefOrGetter<KeyMap>,
 	options?: {
-		disabled: MaybeRef<boolean>;
+		disabled: MaybeRefOrGetter<boolean>;
 	},
 ) => {
-	const pipWindow = inject(PiPWindowSymbol);
-	const activeElement = useActiveElement({ window: pipWindow?.value });
+	const popOutWindow = inject(PopOutWindowKey, ref<Window | undefined>());
+	const activeElement = useActiveElement({ window: popOutWindow?.value });
 	const { isCtrlKeyPressed } = useDeviceSupport();
 
-	const isDisabled = computed(() => unref(options?.disabled));
+	const isDisabled = computed(() => toValue(options?.disabled));
 
-	const ignoreKeyPresses = computed(() => {
-		if (!activeElement.value) return false;
-
-		const active = activeElement.value;
-		const isInput = ['INPUT', 'TEXTAREA'].includes(active.tagName);
-		const isContentEditable = active.closest('[contenteditable]') !== null;
-		const isIgnoreClass = active.closest('.ignore-key-press-canvas') !== null;
-
-		return isInput || isContentEditable || isIgnoreClass;
-	});
+	const ignoreKeyPresses = computed(
+		() => activeElement.value && shouldIgnoreCanvasShortcut(activeElement.value),
+	);
 
 	const normalizedKeymap = computed(() =>
 		Object.fromEntries(
-			Object.entries(keymap.value).flatMap(([shortcut, handler]) => {
+			Object.entries(toValue(keymap)).flatMap(([shortcut, handler]) => {
 				const shortcuts = shortcut.split('|');
 				return shortcuts.map((s) => [normalizeShortcutString(s), handler]);
 			}),
@@ -150,5 +144,5 @@ export const useKeybindings = (
 		}
 	}
 
-	useEventListener(pipWindow?.value?.document ?? document, 'keydown', onKeyDown);
+	useEventListener(popOutWindow?.value?.document ?? document, 'keydown', onKeyDown);
 };

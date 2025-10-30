@@ -4,6 +4,7 @@ import { useI18n } from '@n8n/i18n';
 import { computed } from 'vue';
 import type { ButtonType } from '@n8n/design-system';
 
+import { N8nButton } from '@n8n/design-system';
 const props = withDefaults(
 	defineProps<{
 		saved: boolean;
@@ -37,7 +38,9 @@ const shortcutTooltipLabel = computed(() => {
 
 <template>
 	<span :class="$style.container" data-test-id="save-button">
-		<span v-if="saved" :class="$style.saved">{{ i18n.baseText('saveButton.saved') }}</span>
+		<span v-if="saved" :class="$style.saved" @click.prevent.stop>{{
+			i18n.baseText('saveButton.saved')
+		}}</span>
 		<template v-else>
 			<KeyboardShortcutTooltip
 				v-if="withShortcut"
@@ -45,7 +48,7 @@ const shortcutTooltipLabel = computed(() => {
 				:shortcut="{ keys: ['s'], metaKey: true }"
 				placement="bottom"
 			>
-				<n8n-button
+				<N8nButton
 					:label="saveButtonLabel"
 					:loading="isSaving"
 					:disabled="disabled"
@@ -53,7 +56,7 @@ const shortcutTooltipLabel = computed(() => {
 					:type="type"
 				/>
 			</KeyboardShortcutTooltip>
-			<n8n-button
+			<N8nButton
 				v-else
 				:label="saveButtonLabel"
 				:loading="isSaving"
@@ -80,10 +83,10 @@ const shortcutTooltipLabel = computed(() => {
 .saved {
 	color: $custom-font-very-light;
 	font-size: 12px;
-	font-weight: var(--font-weight-bold);
+	font-weight: var(--font-weight--bold);
 	line-height: 12px;
 	text-align: center;
-	padding: var(--spacing-2xs) var(--spacing-2xs);
+	padding: var(--spacing--2xs) var(--spacing--2xs);
 	min-width: 53px;
 }
 </style>

@@ -15,6 +15,8 @@ import {
 	NodeConnectionTypes,
 } from 'n8n-workflow';
 import { ref } from 'vue';
+import { type IconName } from '@n8n/design-system/components/N8nIcon/icons';
+import { DATA_TYPE_ICON_MAP } from '@/constants';
 
 export function useDataSchema() {
 	function getSchema(
@@ -237,12 +239,13 @@ export type SchemaNode = {
 	hasBinary: boolean;
 	runIndex: number;
 	isDataEmpty: boolean;
+	lastSuccessfulPreview: boolean;
 };
 
 export type RenderItem = {
 	type: 'item';
 	id: string;
-	icon: string;
+	icon: IconName;
 	title?: string;
 	path?: string;
 	level?: number;
@@ -266,12 +269,13 @@ export type RenderHeader = {
 	info?: string;
 	nodeType?: INodeTypeDescription;
 	preview?: boolean;
+	lastSuccessfulPreview?: boolean;
 };
 
 export type RenderIcon = {
 	id: string;
 	type: 'icon';
-	icon: string;
+	icon: IconName;
 	tooltip: string;
 };
 
@@ -293,19 +297,19 @@ export type RenderEmpty = {
 export type Renders = RenderHeader | RenderItem | RenderIcon | RenderNotice | RenderEmpty;
 
 const icons = {
-	object: 'cube',
-	array: 'list',
-	['string']: 'font',
-	null: 'font',
-	['number']: 'hashtag',
-	['boolean']: 'check-square',
+	object: DATA_TYPE_ICON_MAP.object,
+	array: DATA_TYPE_ICON_MAP.array,
+	['string']: DATA_TYPE_ICON_MAP.string,
+	null: 'case-upper',
+	['number']: DATA_TYPE_ICON_MAP.number,
+	['boolean']: DATA_TYPE_ICON_MAP.boolean,
 	function: 'code',
 	bigint: 'calculator',
 	symbol: 'sun',
 	['undefined']: 'ban',
-} as const;
+} satisfies Record<string, IconName>;
 
-const getIconBySchemaType = (type: Schema['type']): string => icons[type];
+const getIconBySchemaType = (type: Schema['type']): IconName => icons[type];
 
 const emptyItem = (
 	key: RenderEmpty['key'],
@@ -321,7 +325,7 @@ const emptyItem = (
 const moreFieldsItem = (): RenderIcon => ({
 	id: `moreFields-${window.crypto.randomUUID()}`,
 	type: 'icon',
-	icon: 'ellipsis-h',
+	icon: 'ellipsis',
 	tooltip: useI18n().baseText('dataMapping.schemaView.previewExtraFields'),
 });
 
@@ -356,6 +360,8 @@ export const useFlattenSchema = () => {
 		prefix = '',
 		level = 0,
 		preview,
+		lastSuccessfulPreview,
+		truncateLimit,
 	}: {
 		isDataEmpty: boolean;
 		schema: Schema;
@@ -366,6 +372,8 @@ export const useFlattenSchema = () => {
 		prefix?: string;
 		level?: number;
 		preview?: boolean;
+		lastSuccessfulPreview?: boolean;
+		truncateLimit: number;
 	}): Renders[] => {
 		// only show empty item for the first level
 		if (isEmptySchema(schema) && level < 0) {
@@ -414,6 +422,8 @@ export const useFlattenSchema = () => {
 							prefix: itemPrefix,
 							level: level + 1,
 							preview,
+							lastSuccessfulPreview,
+							truncateLimit,
 						});
 					})
 					.flat(),
@@ -426,7 +436,7 @@ export const useFlattenSchema = () => {
 					expression,
 					level,
 					depth,
-					value: shorten(schema.value, 600, 0),
+					value: !lastSuccessfulPreview ? shorten(schema.value, truncateLimit, 0) : '',
 					id,
 					icon: getIconBySchemaType(schema.type),
 					collapsable: false,
@@ -444,6 +454,7 @@ export const useFlattenSchema = () => {
 	const flattenMultipleSchemas = (
 		nodes: SchemaNode[],
 		additionalInfo: (node: INodeUi) => string,
+		truncateLimit: number,
 	) => {
 		return nodes.reduce<Renders[]>((acc, item) => {
 			acc.push({
@@ -455,6 +466,7 @@ export const useFlattenSchema = () => {
 				info: additionalInfo(item.node),
 				type: 'header',
 				preview: item.preview,
+				lastSuccessfulPreview: item.lastSuccessfulPreview,
 			});
 
 			if (closedNodes.value.has(item.node.name)) {
@@ -462,13 +474,14 @@ export const useFlattenSchema = () => {
 			}
 
 			if (isEmptySchema(item.schema)) {
-				if (!item.isNodeExecuted) {
+				if (!item.isNodeExecuted && !item.lastSuccessfulPreview) {
 					acc.push(emptyItem('executeSchema', { level: 1 }));
 					return acc;
 				}
 
 				if (item.isDataEmpty) {
-					acc.push(emptyItem('emptyData', { level: 1 }));
+					// Check for binary data even when data is empty
+					acc.push(emptyItem(item.hasBinary ? 'emptySchemaWithBinary' : 'emptyData', { level: 1 }));
 					return acc;
 				}
 				acc.push(emptyItem(item.hasBinary ? 'emptySchemaWithBinary' : 'emptySchema', { level: 1 }));
@@ -483,6 +496,8 @@ export const useFlattenSchema = () => {
 					nodeType: item.node.type,
 					nodeName: item.node.name,
 					preview: item.preview,
+					lastSuccessfulPreview: item.lastSuccessfulPreview,
+					truncateLimit,
 					expressionPrefix: getNodeParentExpression({
 						nodeName: item.node.name,
 						distanceFromActive: item.depth,
@@ -490,7 +505,7 @@ export const useFlattenSchema = () => {
 				}),
 			);
 
-			if (item.preview) {
+			if (item.preview && !item.lastSuccessfulPreview) {
 				acc.push(moreFieldsItem());
 			}
 

@@ -23,7 +23,6 @@ import { NodeApiError, PROJECT_ROOT } from 'n8n-workflow';
 import { v4 as uuid } from 'uuid';
 
 import { ActiveWorkflowManager } from '@/active-workflow-manager';
-import config from '@/config';
 import { FolderNotFoundError } from '@/errors/folder-not-found.error';
 import { BadRequestError } from '@/errors/response-errors/bad-request.error';
 import { NotFoundError } from '@/errors/response-errors/not-found.error';
@@ -33,7 +32,7 @@ import { validateEntity } from '@/generic-helpers';
 import type { ListQuery } from '@/requests';
 import { hasSharing } from '@/requests';
 import { OwnershipService } from '@/services/ownership.service';
-// eslint-disable-next-line import/no-cycle
+// eslint-disable-next-line import-x/no-cycle
 import { ProjectService } from '@/services/project.service.ee';
 import { RoleService } from '@/services/role.service';
 import { TagService } from '@/services/tag.service';
@@ -278,7 +277,7 @@ export class WorkflowService {
 			}
 		}
 
-		if (workflowSettings.executionTimeout === config.get('executions.timeout')) {
+		if (workflowSettings.executionTimeout === this.globalConfig.executions.timeout) {
 			// Do not save when default got set
 			delete workflowSettings.executionTimeout;
 		}
@@ -355,6 +354,28 @@ export class WorkflowService {
 			publicApi: false,
 		});
 
+		// Check if workflow activation status changed
+		const wasActive = workflow.active;
+		const isNowActive = updatedWorkflow.active;
+
+		if (isNowActive && !wasActive) {
+			// Workflow is being activated
+			this.eventService.emit('workflow-activated', {
+				user,
+				workflowId,
+				workflow: updatedWorkflow,
+				publicApi: false,
+			});
+		} else if (!isNowActive && wasActive) {
+			// Workflow is being deactivated
+			this.eventService.emit('workflow-deactivated', {
+				user,
+				workflowId,
+				workflow: updatedWorkflow,
+				publicApi: false,
+			});
+		}
+
 		if (updatedWorkflow.active) {
 			// When the workflow is supposed to be active add it again
 			try {
@@ -370,6 +391,14 @@ export class WorkflowService {
 
 				// Also set it in the returned data
 				updatedWorkflow.active = false;
+
+				// Emit deactivation event since activation failed
+				this.eventService.emit('workflow-deactivated', {
+					user,
+					workflowId,
+					workflow: updatedWorkflow,
+					publicApi: false,
+				});
 
 				let message;
 				if (error instanceof NodeApiError) message = error.description;
@@ -556,5 +585,32 @@ export class WorkflowService {
 				role: sw.role,
 			})),
 		);
+	}
+
+	async getWorkflowsWithNodesIncluded(user: User, nodeTypes: string[], includeNodes = false) {
+		const foundWorkflows = await this.workflowRepository.findWorkflowsWithNodeType(
+			nodeTypes,
+			includeNodes,
+		);
+
+		let { workflows } = await this.workflowRepository.getManyAndCount(
+			foundWorkflows.map((w) => w.id),
+		);
+
+		if (hasSharing(workflows)) {
+			workflows = await this.processSharedWorkflows(workflows);
+		}
+
+		const withScopes = await this.addUserScopes(workflows, user);
+
+		this.cleanupSharedField(withScopes);
+
+		return withScopes.map((workflow) => {
+			const nodes = includeNodes
+				? (foundWorkflows.find((w) => w.id === workflow.id)?.nodes ?? [])
+				: undefined;
+
+			return { resourceType: 'workflow', ...workflow, ...(includeNodes ? { nodes } : {}) };
+		});
 	}
 }

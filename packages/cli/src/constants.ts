@@ -52,6 +52,8 @@ export const RESPONSE_ERROR_MESSAGES = {
 } as const;
 
 export const AUTH_COOKIE_NAME = 'n8n-auth';
+export const OIDC_STATE_COOKIE_NAME = 'n8n-oidc-state';
+export const OIDC_NONCE_COOKIE_NAME = 'n8n-oidc-nonce';
 
 export const NPM_COMMAND_TOKENS = {
 	NPM_PACKAGE_NOT_FOUND_ERROR: '404 Not Found',
@@ -74,10 +76,6 @@ export const CREDENTIAL_BLANKING_VALUE = '__n8n_BLANK_VALUE_e5362baf-c777-4d57-a
 
 export const UM_FIX_INSTRUCTION =
 	'Please fix the database by running ./packages/cli/bin/n8n user-management:reset';
-
-export const MIN_PASSWORD_CHAR_LENGTH = 8;
-
-export const MAX_PASSWORD_CHAR_LENGTH = 64;
 
 export const TEST_WEBHOOK_TIMEOUT = 2 * Time.minutes.toMilliseconds;
 
@@ -128,9 +126,10 @@ export const WsStatusCodes = {
 	CloseGoingAway: 1001,
 	CloseProtocolError: 1002,
 	CloseUnsupportedData: 1003,
-	CloseNoStatus: 1005,
 	CloseAbnormal: 1006,
 	CloseInvalidData: 1007,
 } as const;
 
 export const FREE_AI_CREDITS_CREDENTIAL_NAME = 'n8n free OpenAI API credits';
+
+export const STREAM_SEPARATOR = '⧉⇋⇋➽⌑⧉§§\n';

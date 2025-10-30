@@ -2,9 +2,8 @@
 import { ElDropdown, ElDropdownMenu, ElDropdownItem, type Placement } from 'element-plus';
 import { ref } from 'vue';
 
-import type { IUser, UserAction } from '@n8n/design-system/types';
-import type { IconOrientation, IconSize } from '@n8n/design-system/types/icon';
-
+import type { IUser, UserAction } from '../../types';
+import type { IconOrientation, IconSize } from '../../types/icon';
 import N8nIcon from '../N8nIcon';
 import N8nLoading from '../N8nLoading';
 
@@ -89,7 +88,7 @@ defineExpose({
 			<slot>
 				<span :class="{ [$style.button]: true, [$style[theme]]: !!theme }">
 					<N8nIcon
-						:icon="iconOrientation === 'horizontal' ? 'ellipsis-h' : 'ellipsis-v'"
+						:icon="iconOrientation === 'horizontal' ? 'ellipsis' : 'ellipsis-vertical'"
 						:size="iconSize"
 					/>
 				</span>
@@ -120,7 +119,7 @@ defineExpose({
 						<div :class="$style.iconContainer">
 							<N8nIcon
 								v-if="action.type === 'external-link'"
-								icon="external-link-alt"
+								icon="external-link"
 								size="xsmall"
 								color="text-base"
 							/>
@@ -139,24 +138,26 @@ defineExpose({
 
 .button {
 	cursor: pointer;
-	padding: var(--spacing-4xs);
-	border-radius: var(--border-radius-base);
+	padding: var(--spacing--4xs);
+	border-radius: var(--radius);
+	display: flex;
+	align-items: center;
 
 	&:hover {
-		color: var(--color-primary);
+		color: var(--color--primary);
 		cursor: pointer;
 	}
 
 	&:focus {
-		color: var(--color-primary);
+		color: var(--color--primary);
 	}
 }
 
 .dark {
-	color: var(--color-text-dark);
+	color: var(--color--text--shade-1);
 
 	&:focus {
-		background-color: var(--color-background-xlight);
+		background-color: var(--color--background--light-3);
 	}
 }
 
@@ -165,19 +166,19 @@ defineExpose({
 }
 
 li:hover .iconContainer svg {
-	color: var(--color-primary-tint-1);
+	color: var(--color--primary--tint-1);
 }
 
 .loading-dropdown {
 	display: flex;
 	flex-direction: column;
-	padding: var(--spacing-xs) 0;
-	gap: var(--spacing-2xs);
+	padding: var(--spacing--xs) 0;
+	gap: var(--spacing--2xs);
 }
 
 .loading {
 	display: flex;
 	width: 100%;
-	min-width: var(--spacing-3xl);
+	min-width: var(--spacing--3xl);
 }
 </style>

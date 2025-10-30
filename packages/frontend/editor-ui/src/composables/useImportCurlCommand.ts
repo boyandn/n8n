@@ -231,8 +231,26 @@ export const flattenObject = <T extends Record<string, unknown>>(obj: T, prefix 
 		{} as Record<string, unknown>,
 	);
 
+/**
+ * Extracts and sanitizes the URL in a cURL command.
+ * Converts invalid placeholder syntax like \<PLACEHOLDER\> → {PLACEHOLDER}
+ */
+export function sanitizeCurlUrlPlaceholders(curlCommand: string): string {
+	const CURL_URL_REGEX = /curl\s+(['"]?)(https?:\/\/[^\s'"]+)\1/;
+	const PLACEHOLDER_REGEX = /<([A-Za-z0-9_-]+)>/g;
+
+	const urlMatch = curlCommand.match(CURL_URL_REGEX);
+	if (!urlMatch || !urlMatch[2]) return curlCommand;
+
+	const originalUrl = urlMatch[2];
+	const sanitizedUrl = originalUrl.replaceAll(PLACEHOLDER_REGEX, '{$1}');
+
+	return curlCommand.replace(originalUrl, sanitizedUrl);
+}
+
 export const toHttpNodeParameters = (curlCommand: string): HttpNodeParameters => {
-	const curlJson = curlToJson(curlCommand);
+	const curlJson = curlToJson(sanitizeCurlUrlPlaceholders(curlCommand));
+
 	const headers = curlJson.headers ?? {};
 
 	lowerCaseContentTypeKey(headers);
@@ -243,12 +261,24 @@ export const toHttpNodeParameters = (curlCommand: string): HttpNodeParameters =>
 		headers.authorization = `Basic ${encodeBasicAuthentication(user, pass)}`;
 	}
 
+	// curlconverter does not parse query parameters correctly if they contain commas or semicolons
+	// so we need to parse it again
+	const url = new URL(curlJson.url);
+	const queries = curlJson.queries ?? {};
+	for (const [key, value] of url.searchParams) {
+		queries[key] = value;
+	}
+
+	url.search = '';
+	// URL automatically adds a trailing slash if the path is empty
+	const urlString = url.pathname === '/' ? url.href.slice(0, -1) : url.href;
+
 	const httpNodeParameters: HttpNodeParameters = {
-		url: curlJson.url,
+		url: urlString,
 		authentication: 'none',
 		method: curlJson.method.toUpperCase(),
 		...extractHeaders({ ...headers, ...mapCookies(curlJson.cookies) }),
-		...extractQueries(curlJson.queries),
+		...extractQueries(queries),
 		options: {
 			redirect: {
 				redirect: {},
