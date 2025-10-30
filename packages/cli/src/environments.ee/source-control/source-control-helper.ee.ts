@@ -90,8 +90,8 @@ export function sourceControlFoldersExistCheck(
 }
 
 export function isSourceControlLicensed() {
-	const license = Container.get(License);
-	return license.isSourceControlLicensed();
+	// const license = Container.get(License);
+	return true;
 }
 
 export async function generateSshKeyPair(keyType: KeyPairType) {

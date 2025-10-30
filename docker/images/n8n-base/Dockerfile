@@ -3,6 +3,8 @@ ARG NODE_VERSION=22
 # 1. Use a builder step to download various dependencies
 FROM node:${NODE_VERSION}-alpine AS builder
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Install fonts
 RUN	\
 	apk --no-cache add --virtual fonts msttcorefonts-installer fontconfig && \
