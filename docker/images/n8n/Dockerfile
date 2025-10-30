@@ -8,10 +8,12 @@ ARG TARGETPLATFORM
 # ==============================================================================
 FROM n8nio/base:${NODE_VERSION} AS system-deps
 
-# ==============================================================================
-# STAGE 2: Application Artifact Processor
-# ==============================================================================
-FROM alpine:3.22.0 AS app-artifact-processor
+# Build the application from source
+WORKDIR /src
+COPY . /src
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm/metadata DOCKER_BUILD=true pnpm install --frozen-lockfile
+RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm build
 
 COPY ./compiled /app/
 

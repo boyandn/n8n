@@ -5,6 +5,8 @@ ARG NODE_VERSION=22.21.0
 # ==============================================================================
 FROM node:${NODE_VERSION}-alpine AS builder
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Install fonts
 RUN \
   apk --no-cache add --virtual .build-deps-fonts msttcorefonts-installer fontconfig && \
